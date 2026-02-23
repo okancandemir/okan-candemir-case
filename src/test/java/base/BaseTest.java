@@ -12,12 +12,11 @@ import java.time.Duration;
 public abstract class BaseTest {
 
     protected WebDriver driver;
-    protected WebDriverWait wait; // available for tests if needed; BasePage uses its own FluentWait helpers
+    protected WebDriverWait wait;
 
     @BeforeEach
     void setUp() {
         ChromeOptions options = new ChromeOptions();
-        // options.addArguments("--headless=new"); // istersen CI için açarız
         options.addArguments("--start-maximized");
 
         driver = new ChromeDriver(options);

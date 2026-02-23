@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class QAJobsPage extends BasePage {
 
@@ -52,7 +51,7 @@ public class QAJobsPage extends BasePage {
                     try {
                         selectedText = new Select(selectEl).getFirstSelectedOption().getText();
                     } catch (RuntimeException ignored) {
-                        // best-effort; will attempt option:checked fallback below
+                        // best-effort;
                     }
 
                     String selectedClass = "";
@@ -209,51 +208,6 @@ public class QAJobsPage extends BasePage {
         return valid;
     }
 
-    public boolean qaJobs_areAllListedJobsQAInIstanbul() {
-        if (!waitForJobListToBePopulated(Duration.ofSeconds(20))) {
-            logger.warn("qaJobs_areAllListedJobsQAInIstanbul: job list did not populate in time.");
-            return false;
-        }
-
-        List<WebElement> cards = driver.findElements(qaJobs_jobCards);
-        if (cards.isEmpty()) {
-            logger.warn("qaJobs_areAllListedJobsQAInIstanbul: job cards list is empty.");
-            return false;
-        }
-
-        for (int i = 0; i < cards.size(); i++) {
-            WebElement card = cards.get(i);
-            try {
-                String title = normalizeWhitespace(readTextInCard(card, qaJobs_jobTitleInCard));
-                String department = normalizeWhitespace(readTextInCard(card, qaJobs_jobDepartmentInCard));
-                String location = normalizeWhitespace(readTextInCard(card, qaJobs_jobLocationInCard));
-
-                boolean titleOk = containsIgnoreCase(title, "Quality Assurance") || containsIgnoreCase(title, "QA");
-                boolean deptOk = containsIgnoreCase(department, "Quality Assurance");
-
-                String locationLower = location.toLowerCase(Locale.ROOT);
-                boolean locationOk = locationLower.contains("istanbul")
-                        && (locationLower.contains("turkey") || locationLower.contains("turkiye"));
-
-                if (!(titleOk && deptOk && locationOk)) {
-                    logger.warn(
-                            "Job card validation failed (index={}) (title='{}', department='{}', location='{}')",
-                            i,
-                            title,
-                            department,
-                            location
-                    );
-                    return false;
-                }
-            } catch (RuntimeException e) {
-                logger.warn("Job card validation failed with exception (index={}).", i, e);
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     public JobPreview qaJobs_clickRandomValidViewRoleWithFallback(List<JobPreview> validJobs) {
         if (validJobs == null || validJobs.isEmpty()) {
             logger.warn("qaJobs_clickRandomValidViewRoleWithFallback: validJobs is empty; nothing to click.");
@@ -355,84 +309,6 @@ public class QAJobsPage extends BasePage {
         return null;
     }
 
-    public JobPreview qaJobs_pickRandomJobPreview() {
-        if (!waitForJobListToBePopulated(Duration.ofSeconds(20))) {
-            logger.warn("qaJobs_pickRandomJobPreview: job list did not populate in time.");
-            return null;
-        }
-
-        List<WebElement> cards = driver.findElements(qaJobs_jobCards);
-        if (cards.isEmpty()) {
-            logger.warn("qaJobs_pickRandomJobPreview: no job cards found.");
-            return null;
-        }
-
-        int index = ThreadLocalRandom.current().nextInt(cards.size());
-        WebElement card = cards.get(index);
-
-        String title = normalizeWhitespace(readTextInCard(card, qaJobs_jobTitleInCard));
-        String department = normalizeWhitespace(readTextInCard(card, qaJobs_jobDepartmentInCard));
-        String location = normalizeWhitespace(readTextInCard(card, qaJobs_jobLocationInCard));
-        String href = normalizeWhitespace(readAttributeInCard(card, qaJobs_viewRoleInCard, "href"));
-
-        logger.info(
-                "Selected random job preview (index={}, title='{}', department='{}', location='{}', href='{}')",
-                index,
-                title,
-                department,
-                location,
-                href
-        );
-
-        return new JobPreview(title, department, location, href);
-    }
-
-    public JobPreview qaJobs_clickRandomViewRoleAndReturnPreview() {
-        if (!waitForJobListToBePopulated(Duration.ofSeconds(20))) {
-            logger.warn("qaJobs_clickRandomViewRoleAndReturnPreview: job list did not populate in time.");
-            return null;
-        }
-
-        List<WebElement> cards = driver.findElements(qaJobs_jobCards);
-        if (cards.isEmpty()) {
-            logger.warn("qaJobs_clickRandomViewRoleAndReturnPreview: no job cards found.");
-            return null;
-        }
-
-        int index = ThreadLocalRandom.current().nextInt(cards.size());
-        WebElement card = cards.get(index);
-
-        String title = normalizeWhitespace(readTextInCard(card, qaJobs_jobTitleInCard));
-        String department = normalizeWhitespace(readTextInCard(card, qaJobs_jobDepartmentInCard));
-        String location = normalizeWhitespace(readTextInCard(card, qaJobs_jobLocationInCard));
-
-        WebElement viewRole = card.findElement(qaJobs_viewRoleInCard);
-        String href = normalizeWhitespace(viewRole.getAttribute("href"));
-
-        logger.info(
-                "Clicking View Role for random job (index={}, title='{}', department='{}', location='{}', href='{}')",
-                index,
-                title,
-                department,
-                location,
-                href
-        );
-
-        beforeActionGuards();
-        scrollIntoView(viewRole);
-        try {
-            viewRole.click();
-        } catch (ElementClickInterceptedException e) {
-            logger.warn("View Role click intercepted, retrying once (index={}).", index, e);
-            closeMarketingPopupIfPresentShort();
-            WebElement retryViewRole = card.findElement(qaJobs_viewRoleInCard);
-            scrollIntoView(retryViewRole);
-            retryViewRole.click();
-        }
-
-        return new JobPreview(title, department, location, href);
-    }
-
     private boolean waitForJobListToBePopulated(Duration timeout) {
         try {
             return fluentWait(timeout).until(d -> {
@@ -493,13 +369,6 @@ public class QAJobsPage extends BasePage {
         } catch (RuntimeException e) {
             return "";
         }
-    }
-
-    private static boolean containsIgnoreCase(String text, String needle) {
-        if (text == null || needle == null) {
-            return false;
-        }
-        return text.toLowerCase(Locale.ROOT).contains(needle.toLowerCase(Locale.ROOT));
     }
 
     private static String normalizeWhitespace(String s) {
